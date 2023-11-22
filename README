@@ -1,0 +1,207 @@
+*******************************************************************************************************************************************
+Exmple datasets and code from Nason et al., 2021, Neuron
+
+"Real-Time Linear Prediction of Simultaneous and Independent Movements of Two Finger Groups Using an Intracortical Brain-Machine Interface"
+
+Compiled by Samuel Nason for the Chestek Lab, July 2021
+Please contact cchestek@umich.edu with any questions
+
+Version 1: Initial upload
+*******************************************************************************************************************************************
+
+***********
+Description
+***********
+This data is a subset of the data used to generate components of all figures in the manuscript and supplement in Nason et al., 2021, Neuron. The purpose of the study was to demonstrate the first-ever simultaneous brain-control of two independent groups of fingers in one hand with some analysis of cortical tuning to finger movements in nonhuman primates. This advises future brain-machine interfaces for the control of finger movements with humans. All of the data is contained in .mat files, which can be commonly opened by Matlab and the Python scipy library. The Matlab packages (and versions) used for the manuscript are: MATLAB (9.4), Signal Processing Toolbox (8.0), Statistics and Machine Learning Toolbox (11.3), and Curve Fitting Toolbox (3.5.7).
+
+***********
+Methodology
+***********
+This data and code set includes examples that can be used to generate all figures in the manuscript. There is data from two nonhuman primates performing a two degree-of-freedom finger task using a manipulandum or a brain-machine interface to control a virtual hand to hit targets presented for the fingers (see supplemental videos in the publication link). There is data from two styles of the task. 1) Center-out, which is most of the data, is when every other pair of targets was presented at a rest location (center) for the two fingers, and in between were a random pair of targets where at least one was not at rest (out). 2) Random is when the pairs of targets are randomly placed individually along the range of motion of the fingers, but not separated by more than 50% of the range of motion. Data for both types of the task include the spiking band power measurements (Nason et al., Nature BME, 2020) synchronized with measurements of finger flexion and target information.
+
+****************
+Data Description
+****************
+
+General data notes:
+	- 'TargetScaling', 'TargetPos', and 'FingerAnglesTIMRL' in the z structures and 'targ', 'targsize', and 'y' variables are all in units %/100. 0% is full extension, 100% is full flexion.
+	- All data files were collected while monkeys N and W were performing the center-out task, except in the files 'MonkeyN_R.mat' and 'MonkeyW_R.mat', in which they performed the random task.
+
+'MonkeyN_MC.mat', 'MonkeyN_KC.mat', 'MonkeyN_RC.mat', 'MonkeyW_MC.mat', 'MonkeyW_KC.mat', and 'MonkeyW_RC.mat':
+	- All data was integrated into 32ms bins as used for training the online decoders and contributed to statistics in Figures 2 and 3 and analysis in Figure 4.
+	- All files have similar variables:
+		- 'targ' contains target information for each bin. The first column is the location of the index target, the second column is the location of the MRS target.
+		- 'targsize' contains the radii of the displayed targets, so half of the width of the acquisition range.
+		- 'trials' contains the trial numbers corresponding to each bin.
+		- 'X' contains the SBP in each bin for 96 channels. A subset of these channels were used online, which are listed in 'OlVsClTuning.m' for each monkey.
+		- 'y' contains the visual feedback of the fingers provided to the monkeys. In training data ('_MC.mat' file suffix), these are the positions and associated velocities of the monkeys' physical fingers measured by the manipulandum. In closed-loop data ('_KC.mat' and '_RC.mat' file suffixes), these are the predicted positions and associated velocities from the Kalman filter algorithm in use, prior to ReFIT manipulations.
+	- '_MC.mat' suffixes:
+		- Manipulandum control trials used to train the closed-loop Kalman filter.
+		- Used with:
+			- OlVsClTuning.m
+			- TrainOnlineKalmanFilter.m
+			- KalmanFilterOnline.m (after training parameters with TrainOnlineKalmanFilter.m)
+	- '_KC.mat' suffixes:
+		- Kalman filter control trials used to train the ReFIT Kalman filter, before any ReFIT manipulations.
+		- Used with:
+			- OlVsClTuning.m
+			- TrainOnlineRefitKalmanFilter.m
+			- KalmanFilterOnline.m (after training parameters with TrainOnlineRefitKalmanFilter.m)
+	- '_RC.mat' suffixes:
+		- ReFIT Kalman filter control trials.
+		- Used with:
+			- OlVsClTuning.m
+	- The three datasets provided for each monkey were collected on the same day and used consecutively in the training and testing pipeline.
+
+'MonkeyN_CO.mat', 'MonkeyN_R.mat', 'MonkeyN_Tuning.mat', 'MonkeyW_CO.mat', 'MonkeyW_R.mat', and 'MonkeyW_Tuning.mat':
+	- These files contain 'z' structure arrays.
+	- Each element of the 'z' structure array corresponds to one trial.
+	- These structures contain similar fields:
+		- 'MoveMask': A boolean indicator of which fingers for which targets are presented. Element 2 controls the index finger, element 4 controls the MRS fingers as a group.
+		- 'TargetHoldTime': The amount of time the monkey was required to hold each target continuously for successful acquisition, in ms.
+		- 'TargetScaling': The radius of the spherical target, in %range-of-motion/100. This means that the total one-dimensional range acceptable for target acquisition is 2*'TargetScaling'.
+		- 'TargetPos': The position of the center of the target in the range of motion, in %range-of-motion/100.
+		- 'TrialTimeoutms': The duration, in ms, of a trial where, if the targets had not all been successfully acquired by this time, the trial is deemed unsuccessful and the next trial begins.
+		- 'BlankTrial': A boolean indicator of whether the hand was visible on the screen displayed to the monkey. 1 means the hand was not displayed, 0 means the hand was displayed.
+		- 'TrialSuccess': A boolean indicator of whether the trial was completed successfully prior to timeout.
+		- 'FingerAnglesTIMRL': The position of the fingers within the range of motion in units %range-of-motion/100, sampled every 1ms. The first dimension represents time corresponding to 'ExperimentTime', the second dimension represents the measured finger position. The populated columns are based on 'MoveMask'.
+		- 'ExperimentTime': The time elapsed since the beginning of the experiment, in ms. For each trial, this contains the ms-times belonging to that trial.
+		- 'NeuralFeature': The spiking band power for all 96 channels accumulated each ms corresponding to 'ExperimentTime', acquired via the following procedure:
+			1) Filtered to 300-1,000Hz using the Digital Filter Editor in the Central Software Suite (Blackrock Microsystems, LLC).
+			2) Sampled at 2 kilo-samples per second.
+			3) Transmitted from the Cerebus system to the xPC Target system (see methods in the main paper) at 2 kilo-samples per second.
+			4) All samples received by the xPC within 1ms are absolute-valued then summed within each channel, contained in the 'NeuralFeature' field.
+		- 'SampleWidth': The number of 'NeuralFeature' samples received by the xPC during each 1ms, corresponding to 'ExperimentTime'.
+		- 'TrialNumber': The trial number of the present element of the z structure array. Use this field to find any skipped trials for time continuity.
+		- 'SingleUnit': An array of structures containing the sorted unit spiking times for each unit. Spiking times correspond to ExperimentTime. This field is only present in 'MonkeyN_Tuning.mat' and 'MonkeyW_Tuning.mat'.
+	- The structures in 'MonkeyN_CO.mat' and 'MonkeyN_R.mat' are each two sets of experiments combined into one (four experiments combined into two total). All trials were collected on the same day, but other tasks were performed in between.
+		- The first trial for the second set of trials for 'MonkeyN_CO.mat' is array index 751.
+		- The first trial for the second set of trials for 'MonkeyN_R.mat' is array index 495.
+
+****************
+Code Description
+****************
+
+'TrainOnlineKalmanFilter.m':
+	- This contains the code used to train the closed-loop Kalman filter from manipulandum control trials.
+	- The variables in 'MonkeyN_MC.mat' and 'MonkeyW_MC.mat' can be used with this function to train the Kalman filters that were used during the corresponding closed-loop Kalman filter trials, 'MonkeyN_KC.mat' and 'MonkeyW_KC.mat', respectively.
+	- This code was involved in the generation of Figures 2, 3, and 4 and Supplementary Figure 2.
+
+'TrainOnlineRefitKalmanFilter.m':
+	- This contains the code used to train the closed-loop ReFIT Kalman filter from Kalman filter control trials.
+	- The variables in 'MonkeyN_KC.mat' and 'MonkeyW_KC.mat' can be used with this function to train the ReFIT Kalman filters that were used during the corresponding closed-loop ReFIT Kalman filter trials, 'MonkeyN_RC.mat' and 'MonkeyW_RC.mat', respectively.
+	- This code was involved in the generation of Figures 3 and 4.
+
+'KalmanFilterOnline.m':
+	- This contains the relevant portions of the real-time Kalman filter executed in xPC Target.
+	- The parameters trained with 'TrainOnlineKalmanFilter.m' and 'TrainOnlineRefitKalmanFilter.m' can be used with this function with the neural features contained in 'MonkeyN_MC.mat', 'MonkeyN_KC.mat', 'MonkeyN_RC.mat', 'MonkeyW_MC.mat', 'MonkeyW_KC.mat', and 'MonkeyW_RC.mat'.
+	- This code was involved in the generation of Figures 2, 3, and 4 and Supplementary Figure 2.
+
+'OlVsClTuning.m':
+	- This performs the complete analysis and figure generation for Figure 4.
+	- It uses datasets 'MonkeyN_MC.mat', 'MonkeyN_KC.mat', 'MonkeyN_RC.mat', 'MonkeyW_MC.mat', 'MonkeyW_KC.mat', and 'MonkeyW_RC.mat'.
+	- The code, as it runs, chooses a different order of optimal channels than is published in Figure 4. There is a section of the script that manually corrects the optimal channels. The three channels published are:
+		- Monkey N: 33, 5, 2
+		- Monkey W: 11, 10, 31
+
+'tuningFeatsPerTrial.m':
+	- This performs the preliminary feature extraction and analysis for Figures 5 and 6 and Supplementary Figures 1 and 3-8. 
+	- It uses datasets 'MonkeyN_Tuning.mat' and 'MonkeyW_Tuning.mat'.
+	- This extracts trial-related neural features and performs ridge regression training and testing with a subset of behaviors or with the complete set of behaviors.
+	- This must be run prior to 'tuningFigures.m'.
+
+'tuningFigures.m':
+	- This contains most of the analysis code and figure generation for Figures 5 and 6 and Supplementary Figures 1 and 3-8.
+	- This requires 'tuningFeatsPerTrial.m' be run first and the 'zComb' and 'featStats' variables in the workspace.
+
+'RandomTargetsTuning.m':
+	- This performs the complete analysis and figure generation for Figure 7.
+	- It uses datasets 'MonkeyN_CO.mat', 'MonkeyN_R.mat', 'MonkeyW_CO.mat', and 'MonkeyW_R.mat'.
+
+'calcPathEff.m':
+	- This calculates the path efficiencies of the trials in the input z structure.
+	- This can be used as-is with datasets 'MonkeyN_Tuning.mat', 'MonkeyN_CO.mat', 'MonkeyN_R.mat', 'MonkeyW_Tuning.mat', 'MonkeyW_CO.mat', and 'MonkeyW_R.mat'.
+	- This code was involved in the generation of Figures 2 and 3 and Supplementary Figure 2.
+
+'calcTrialTimes.m':
+	- This calculates the times-to-target and orbiting times of the trials in the input z structure.
+	- This can be used as-is with datasets 'MonkeyN_Tuning.mat', 'MonkeyN_CO.mat', 'MonkeyN_R.mat', 'MonkeyW_Tuning.mat', 'MonkeyW_CO.mat', and 'MonkeyW_R.mat'.
+	- This code was involved in the generation of Figures 2 and 3 and Supplementary Figure 2.
+
+'adjustFeats.m':
+	- This shifts neural data against behavioral data for different temporal alignments, adding or removing data as necessary.
+	- This is used in 'tuningFeatsPerTrial.m'.
+	
+'assignStatGroups.m':
+	- This groups variables based on statistical similarity (i.e. nonsignificant pairwise p-values).
+	- This is used in 'tuningFigures.m'.
+	
+'cleanZspikes.m':
+	- This function removes likely noisy spike times, defined as times where some threshold of channels all have a spike registered at the same time.
+	- This is used in 'tuningFeatsPerTrial.m'.
+	
+'fdrSigs.m':
+	- Performs false-discovery rate corrections on an input matrix of p-values.
+	- This is used in 'RandomTargetsTuning.m' and 'TuningFigures.m'.
+	
+'featExtractorMoveOnset.m':
+	- This bins features according to different lags.
+	- This is used in 'tuningFeatsPerTrial.m'.
+	
+'getZAvgNeu.m':
+	- This computes neural activity statistics across an experiment.
+	- This is used in 'RandomTargetsTuning.m' and 'tuningFeatsPerTrial.m'.
+	
+'getZFeats.m':
+	- This grabs aligned neural and behavioral features in customizable bin sizes from an input structure.
+	- This is used in 'OlVsClTuning.m', 'RandomTargetsTuning.m', getZAvgNeu.m', and 'tuningFeatsPerTrial.m'.
+	
+'kFoldCV.m':
+	- This performs k-fold cross-validation on input data using arbitrary training and testing functions.
+	- This is used in 'tuningFeatsPerTrial.m'.
+	
+'kfTrain.m':
+	- This trains Kalman filter parameters from input neural and behavioral matrices.
+	- This is used in 'OlVsClTuning.m'.
+	
+'plotDist.m':
+	- This plots a distribution of points to show distribution instead of plotting bars.
+	- This is used in 'tuningFigures.m'.
+	
+'rrPredict.m':
+	- This uses ridge regression parameters to make predictions from input data and parameters trained by 'rrTrain.m'.
+	- This is used in 'tuningFeatsPerTrial.m' and with parameters from 'rrTrain.m'.
+	
+'rrTrain.m':
+	- This trains ridge regression weights from input neural and behavioral data and an optional regularization lambda.
+	- This is used in 'tuningFeatsPerTrial.m' and with 'rrPredict.m'.
+	
+'vararginParser.m':
+	- This is a function that parses varargin inputs to extract function parameters.
+	- This is used in most functions included in the package.
+	
+'zAddMoveOnset.m':
+	- This adds a new field to z structures containing the movement onset time of each trial, determined by the maximum magnitude jerk (derivative of acceleration) prior to the first major movement in the trial.
+	- This is used in 'RandomTargetsTuning.m' and 'tuningFeatsPerTrial.m'.
+
+***************************************
+Required MATLAB Products (Version used)
+***************************************
+MATLAB (9.4)
+Signal Processing Toolbox (8.0)
+Statistics and Machine Learning Toolbox (11.3)
+Curve Fitting Toolbox (3.5.7)
+
+***********************
+Links to 3rd party code
+***********************
+The functions below were used to generate figure elements in some of the code above.
+
+my_xticklabels: https://www.mathworks.com/matlabcentral/fileexchange/19059-my_xticklabels?s_tid=prof_contriblnk
+Pekka Kumpulainen (2021). MY_XTICKLABELS (https://www.mathworks.com/matlabcentral/fileexchange/19059-my_xticklabels), MATLAB Central File Exchange.
+
+shadedErrorBar: https://www.mathworks.com/matlabcentral/fileexchange/26311-raacampbell-shadederrorbar
+Rob Campbell (2021). raacampbell/shadedErrorBar (https://github.com/raacampbell/shadedErrorBar), GitHub.
+
+Violin and violinplot: https://github.com/bastibe/Violinplot-Matlab
+Bechtold, Bastian, 2016. Violin Plots for Matlab, Github Project https://github.com/bastibe/Violinplot-Matlab, DOI: 10.5281/zenodo.4559847
